@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classmate Feedback App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f0fdf4; /* Light green background */
+            background-image: radial-gradient(#dcfce7 20%, transparent 20%), radial-gradient(#dcfce7 20%, transparent 20%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        h1, h2, h3, .btn-text {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .cartoon-shadow {
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+            border: 2px solid black;
+        }
+
+        .cartoon-btn {
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .cartoon-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px 0px rgba(0,0,0,1);
+        }
+
+        /* Custom radio buttons for rating */
+        .rating-input {
+            display: none;
+        }
+
+        .rating-label {
+            cursor: pointer;
+            filter: grayscale(100%);
+            transition: transform 0.2s, filter 0.2s;
+        }
+
+        .rating-input:checked + .rating-label {
+            filter: grayscale(0%);
+            transform: scale(1.2);
+        }
+
+        .rating-label:hover {
+            transform: scale(1.1);
+        }
+
+        /* Avatar styles */
+        .avatar-container {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            background-color: #fef08a; /* Yellow bg for avatar */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .avatar-svg {
+            width: 80%;
+            height: 80%;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes popUp {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-content {
+            animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Custom Range Slider */
+        .cartoon-range {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            outline: none;
+        }
+        .cartoon-range::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 12px;
+            background: #e5e7eb;
+            border: 2px solid black;
+            border-radius: 8px;
+            box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+        }
+        .cartoon-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #f472b6; /* pink-400 */
+            cursor: pointer;
+            margin-top: -10px;
+            border: 2px solid black;
+            box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+            transition: transform 0.1s;
+        }
+        .cartoon-range::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+        .cartoon-range::-moz-range-track {
+            width: 100%;
+            height: 12px;
+            background: #e5e7eb;
+            border: 2px solid black;
+            border-radius: 8px;
+            box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+        }
+        .cartoon-range::-moz-range-thumb {
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #f472b6; /* pink-400 */
+            cursor: pointer;
+            border: 2px solid black;
+            box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+        }
+
+        /* Vibe Card Styles */
+        .vibe-card {
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s;
+        }
+        .peer:checked + .vibe-card {
+            background-color: #86efac; /* green-300 */
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px 0px rgba(0,0,0,1);
+        }
+        .vibe-card:hover {
+            background-color: #dcfce7; /* green-100 */
+        }
+        .peer:checked + .vibe-card:hover {
+             background-color: #86efac; /* Keep green-300 on hover if checked */
+        }
+
+        /* Custom Scrollbar for textarea */
+        textarea::-webkit-scrollbar {
+            width: 12px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #fff;
+            border-left: 2px solid black;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background-color: #fbbf24;
+            border: 2px solid black;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-white rounded-3xl p-6 cartoon-shadow relative">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl text-purple-600 mb-2 drop-shadow-md">Buddy Feedback!</h1>
+            <p class="text-gray-600 font-bold">Tell us about him...</p>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="flex flex-col items-center mb-8 relative">
+            <!-- Decorative stars -->
+            <i class="fa-solid fa-star text-yellow-400 absolute top-0 left-8 text-xl animate-pulse"></i>
+            <i class="fa-solid fa-star text-yellow-400 absolute bottom-4 right-8 text-2xl animate-pulse" style="animation-delay: 0.5s;"></i>
+            
+            <div class="avatar-container cartoon-shadow mb-3">
+                <!-- SVG Boy Avatar -->
+                <svg class="avatar-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Face -->
+                    <circle cx="50" cy="50" r="40" fill="#FFCDB2" />
+                    <!-- Hair -->
+                    <path d="M 10 50 Q 50 0 90 50 Q 80 10 50 10 Q 20 10 10 50 Z" fill="#6B705C" />
+                    <path d="M 15 45 Q 30 20 50 30" stroke="#6B705C" stroke-width="4" fill="none" stroke-linecap="round"/>
+                    <!-- Eyes -->
+                    <circle cx="35" cy="45" r="5" fill="#333" />
+                    <circle cx="65" cy="45" r="5" fill="#333" />
+                    <!-- Glasses -->
+                    <circle cx="35" cy="45" r="10" fill="none" stroke="#333" stroke-width="2"/>
+                    <circle cx="65" cy="45" r="10" fill="none" stroke="#333" stroke-width="2"/>
+                    <line x1="45" y1="45" x2="55" y2="45" stroke="#333" stroke-width="2"/>
+                    <line x1="10" y1="45" x2="25" y2="45" stroke="#333" stroke-width="2"/>
+                    <line x1="75" y1="45" x2="90" y2="45" stroke="#333" stroke-width="2"/>
+                    <!-- Nose -->
+                    <path d="M 50 50 Q 55 55 50 60" fill="none" stroke="#E5989B" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Smile -->
+                    <path d="M 35 65 Q 50 80 65 65" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round" />
+                    <!-- Blush -->
+                    <circle cx="25" cy="55" r="6" fill="#FFB4A2" opacity="0.6"/>
+                    <circle cx="75" cy="55" r="6" fill="#FFB4A2" opacity="0.6"/>
+                </svg>
+            </div>
+            <h2 class="text-2xl text-gray-800">Alex Student</h2>
+            <span class="bg-blue-200 text-blue-800 py-1 px-3 rounded-full text-sm font-bold mt-2 cartoon-shadow">Grade 10 - Section A</span>
+        </div>
+
+        <form id="feedbackForm" class="space-y-6">
+            
+            <!-- Closeness Section -->
+            <div class="bg-indigo-50 p-4 rounded-2xl cartoon-shadow">
+                <label class="block text-lg font-bold text-indigo-800 mb-3 text-center btn-text">How close are you two?</label>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="closeness" value="observer" class="sr-only peer" required>
+                        <div class="vibe-card bg-white p-2 rounded-xl cartoon-shadow text-center text-sm font-bold text-gray-700 h-full flex flex-col justify-center items-center gap-1">
+                            <span class="text-2xl">👀</span>
+                            <span>Just Watching</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="closeness" value="casual" class="sr-only peer">
+                        <div class="vibe-card bg-white p-2 rounded-xl cartoon-shadow text-center text-sm font-bold text-gray-700 h-full flex flex-col justify-center items-center gap-1">
+                            <span class="text-2xl">👋</span>
+                            <span>Casual Bros</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="closeness" value="bestie" class="sr-only peer">
+                        <div class="vibe-card bg-white p-2 rounded-xl cartoon-shadow text-center text-sm font-bold text-gray-700 h-full flex flex-col justify-center items-center gap-1">
+                            <span class="text-2xl">🤞</span>
+                            <span>Besties</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Rating Section -->
+            <div class="bg-blue-50 p-4 rounded-2xl cartoon-shadow">
+                <label class="block text-lg font-bold text-blue-800 mb-3 text-center btn-text">How cool is he?</label>
+                <div class="flex justify-between px-2">
+                    <!-- Option 1 -->
+                    <div class="text-center">
+                        <input type="radio" id="rating1" name="coolness" value="1" class="rating-input" required>
+                        <label for="rating1" class="rating-label block text-4xl mb-1">🥶</label>
+                        <span class="text-xs font-bold text-gray-500">Chilly</span>
+                    </div>
+                    <!-- Option 2 -->
+                    <div class="text-center">
+                        <input type="radio" id="rating2" name="coolness" value="2" class="rating-input">
+                        <label for="rating2" class="rating-label block text-4xl mb-1">😐</label>
+                        <span class="text-xs font-bold text-gray-500">Okay</span>
+                    </div>
+                    <!-- Option 3 -->
+                    <div class="text-center">
+                        <input type="radio" id="rating3" name="coolness" value="3" class="rating-input" checked>
+                        <label for="rating3" class="rating-label block text-4xl mb-1">😎</label>
+                        <span class="text-xs font-bold text-gray-500">Cool</span>
+                    </div>
+                    <!-- Option 4 -->
+                    <div class="text-center">
+                        <input type="radio" id="rating4" name="coolness" value="4" class="rating-input">
+                        <label for="rating4" class="rating-label block text-4xl mb-1">🔥</label>
+                        <span class="text-xs font-bold text-gray-500">Fire!</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Energy Level -->
+            <div class="bg-pink-50 p-4 rounded-2xl cartoon-shadow">
+                <label class="block text-lg font-bold text-pink-800 mb-3 text-center btn-text">Energy Level ⚡</label>
+                <div class="flex items-center gap-4 px-2">
+                    <span class="text-3xl" title="Sloth Mode">🦥</span>
+                    <input type="range" min="1" max="10" value="5" class="w-full cartoon-range" id="energyLevel" name="energy">
+                    <span class="text-3xl" title="Lightning">🚀</span>
+                </div>
+            </div>
+
+            <!-- Humane Level -->
+            <div class="bg-teal-50 p-4 rounded-2xl cartoon-shadow">
+                <label class="block text-lg font-bold text-teal-800 mb-3 text-center btn-text">Is he even human? 🧬</label>
+                <div class="flex items-center gap-4 px-2">
+                    <span class="text-3xl" title="Total Robot">🤖</span>
+                    <input type="range" min="1" max="10" value="8" class="w-full cartoon-range" id="humaneLevel" name="humane">
+                    <span class="text-3xl" title="Literal Angel">😇</span>
+                </div>
+            </div>
+
+            <!-- Group Project Vibe -->
+            <div class="bg-green-50 p-4 rounded-2xl cartoon-shadow">
+                <label class="block text-lg font-bold text-green-800 mb-3 text-center btn-text">In Group Projects...</label>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="project_vibe" value="hero" class="sr-only peer" required>
+                        <div class="vibe-card bg-white p-2 rounded-xl cartoon-shadow text-center text-sm font-bold text-gray-700 h-full flex flex-col justify-center items-center gap-1">
+                            <span class="text-2xl">🦸‍♂️</span>
+                            <span>The Hero</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="project_vibe" value="team_player" class="sr-only peer">
+                        <div class="vibe-card bg-white p-2 rounded-xl cartoon-shadow text-center text-sm font-bold text-gray-700 h-full flex flex-col justify-center items-center gap-1">
+                            <span class="text-2xl">🤝</span>
+                            <span>Team Player</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="project_vibe" value="ghost" class="sr-only peer">
+                        <div class="vibe-card bg-white p-2 rounded-xl cartoon-shadow text-center text-sm font-bold text-gray-700 h-full flex flex-col justify-center items-center gap-1">
+                            <span class="text-2xl">👻</span>
+                            <span>The Ghost</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Best Trait -->
+            <div>
+                <label class="block text-lg font-bold text-gray-800 mb-2 btn-text">His superpower is...</label>
+                <div class="flex flex-wrap gap-2" id="traitTags">
+                    <button type="button" class="trait-btn bg-white px-3 py-2 rounded-xl cartoon-shadow text-sm font-bold text-gray-700 hover:bg-yellow-100 cartoon-btn" data-trait="Smart">🧠 Smart</button>
+                    <button type="button" class="trait-btn bg-white px-3 py-2 rounded-xl cartoon-shadow text-sm font-bold text-gray-700 hover:bg-yellow-100 cartoon-btn" data-trait="Funny">😂 Funny</button>
+                    <button type="button" class="trait-btn bg-white px-3 py-2 rounded-xl cartoon-shadow text-sm font-bold text-gray-700 hover:bg-yellow-100 cartoon-btn" data-trait="Helpful">🤝 Helpful</button>
+                    <button type="button" class="trait-btn bg-white px-3 py-2 rounded-xl cartoon-shadow text-sm font-bold text-gray-700 hover:bg-yellow-100 cartoon-btn" data-trait="Creative">🎨 Creative</button>
+                </div>
+                <input type="hidden" id="selectedTrait" name="trait" required>
+            </div>
+
+            <!-- Mini Roast Section -->
+            <div class="bg-orange-50 p-4 rounded-2xl cartoon-shadow">
+                <label for="roast" class="block text-lg font-bold text-orange-800 mb-1 btn-text">Time for a mini roast! 🌶️</label>
+                <p class="text-xs text-orange-600 font-bold mb-3">What's his most annoying habit? (Keep it playful!)</p>
+                <textarea id="roast" name="roast" rows="2" placeholder="He always steals my fries..." class="w-full p-3 rounded-xl border-2 border-black cartoon-shadow focus:outline-none focus:ring-4 focus:ring-orange-200 resize-none font-semibold text-gray-700"></textarea>
+            </div>
+
+            <!-- Detailed Feedback -->
+            <div>
+                <label for="comments" class="block text-lg font-bold text-gray-800 mb-2 btn-text">Secret message for him:</label>
+                <textarea id="comments" name="comments" rows="3" placeholder="You are awesome because..." class="w-full p-3 rounded-xl border-2 border-black cartoon-shadow focus:outline-none focus:ring-4 focus:ring-purple-200 resize-none font-semibold text-gray-700" required></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="submitBtn" type="submit" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black text-xl py-3 rounded-xl cartoon-shadow cartoon-btn btn-text relative overflow-hidden group transition-all">
+                <span id="btnText" class="relative z-10 flex items-center justify-center gap-2">
+                    Send Feedback! <i class="fa-solid fa-paper-plane group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                </span>
+                <!-- decorative shine -->
+                <div class="absolute top-0 -left-[100%] w-1/2 h-full bg-white opacity-20 skew-x-[-20deg] group-hover:animate-[shine_0.5s_ease-in-out]"></div>
+            </button>
+        </form>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content bg-white p-8 rounded-3xl cartoon-shadow max-w-sm w-11/12 text-center relative">
+            
+            <div class="w-24 h-24 bg-green-400 rounded-full mx-auto mb-4 flex items-center justify-center cartoon-shadow">
+                <i class="fa-solid fa-check text-4xl text-white"></i>
+            </div>
+            
+            <h2 class="text-3xl text-green-600 mb-2 btn-text">Woohoo!</h2>
+            <p class="text-gray-700 font-bold mb-6 text-lg">Your feedback flew straight to him!</p>
+            
+            <button id="closeModal" class="bg-purple-500 hover:bg-purple-400 text-white px-6 py-2 rounded-xl cartoon-shadow cartoon-btn btn-text text-lg">
+                Awesome!
+            </button>
+            
+            <!-- Confetti decorative elements -->
+            <i class="fa-solid fa-bahai text-pink-500 absolute top-4 left-4 animate-spin text-xl"></i>
+            <i class="fa-solid fa-bahai text-yellow-500 absolute bottom-10 right-4 animate-spin text-xl" style="animation-direction: reverse;"></i>
+        </div>
+    </div>
+
+    <script>
+        // IMPORTANT: Replace this URL with your deployed Google Apps Script Web App URL!
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAw9OXdXHJDgwYVdl6FYUb2AHDNPRWsGyJpOZC9fFf3AjDaVZUjLYpCZVSObWJ5Cgl/exec';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('feedbackForm');
+            const traitBtns = document.querySelectorAll('.trait-btn');
+            const selectedTraitInput = document.getElementById('selectedTrait');
+            const modal = document.getElementById('successModal');
+            const closeModalBtn = document.getElementById('closeModal');
+
+            // Handle trait selection
+            traitBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active state from all
+                    traitBtns.forEach(b => {
+                        b.classList.remove('bg-yellow-300', 'border-2', 'border-black');
+                        b.classList.add('bg-white');
+                    });
+                    
+                    // Add active state to clicked
+                    btn.classList.remove('bg-white');
+                    btn.classList.add('bg-yellow-300', 'border-2', 'border-black');
+                    
+                    // Update hidden input
+                    selectedTraitInput.value = btn.dataset.trait;
+                });
+            });
+
+            // Form submission
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // Validate custom trait requirement since it's a hidden input
+                if(!selectedTraitInput.value) {
+                    // Shake animation for traits container if none selected
+                    const traitContainer = document.getElementById('traitTags');
+                    traitContainer.style.animation = 'shake 0.5s';
+                    setTimeout(() => { traitContainer.style.animation = ''; }, 500);
+                    
+                    // Visual cue
+                    const label = traitContainer.previousElementSibling;
+                    const originalColor = label.style.color;
+                    label.style.color = 'red';
+                    setTimeout(() => { label.style.color = originalColor; }, 1000);
+                    return;
+                }
+
+                const submitBtn = document.getElementById('submitBtn');
+                const btnText = document.getElementById('btnText');
+                
+                // 1. Update UI to show a loading state
+                const originalBtnContent = btnText.innerHTML;
+                btnText.innerHTML = 'Sending... <i class="fa-solid fa-spinner fa-spin"></i>';
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+                // 2. Gather the form data
+                const formData = new FormData(form);
+
+                // 3. Send data to Google Apps Script
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    // Show success modal on successful submission
+                    modal.classList.add('active');
+                })
+                .catch(error => {
+                    console.error('Error!', error.message);
+                    // Just in case it fails, fallback to alert
+                    alert("Oops! Something went wrong while sending. Did you set up the Google Apps Script URL?"); 
+                })
+                .finally(() => {
+                    // Reset button back to normal
+                    btnText.innerHTML = originalBtnContent;
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                });
+            });
+
+            // Close modal
+            closeModalBtn.addEventListener('click', () => {
+                modal.classList.remove('active');
+                form.reset();
+                // Reset traits
+                traitBtns.forEach(b => {
+                    b.classList.remove('bg-yellow-300', 'border-2', 'border-black');
+                    b.classList.add('bg-white');
+                });
+                selectedTraitInput.value = '';
+                // Default select 'Cool' rating
+                document.getElementById('rating3').checked = true;
+                document.getElementById('energyLevel').value = 5;
+            });
+
+            // Close modal on outside click
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModalBtn.click();
+                }
+            });
+        });
+
+        // Add shake animation to document
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes shake {
+                0% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                50% { transform: translateX(5px); }
+                75% { transform: translateX(-5px); }
+                100% { transform: translateX(0); }
+            }
+            @keyframes shine {
+                100% { left: 150%; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
